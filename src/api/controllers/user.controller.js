@@ -1,0 +1,95 @@
+const User = require('../models/user.model')
+const bcrypt = require('bcrypt')
+const { generateToken } = require('../../utils/token');
+const { deleteImgCloudinary } = require('../../utils/cloudinary');
+
+// Register a new user
+async function registerUser(req, res, _) {
+  try {
+    const user = new User(req.body);
+
+    if(req.file) {
+      user.image = req.file.path;
+    }
+
+    const userExist = await User.findOne({ email: user.email });
+    if (userExist) {
+        return res.status(400).json("Error: User already exists");
+    }
+
+    const userDB = await user.save();
+    return res.status(201).json(userDB);
+  } catch (error) {
+    return res.status(400).json("Error registering user");
+  }
+}
+
+// Login user
+async function loginUser(req, res, _) {
+  try {
+    const user = await User.findOne({ email: req.body.email });
+    if (!user) {
+      return res.status(400).json("Error: Incorrect username or password");
+    }
+    if (bcrypt.compareSync(req.body.password, user.password)) {
+      const token = generateToken(user._id, user.email);
+      return res.status(200).json(token);
+    } else {
+      res.status(400).json("Error: Incorrect username or password"); 
+    }
+  } catch (error) {
+    return res.status(400).json("Error logging in user");
+  }
+}
+
+// Delete a user
+async function deleteUser(req, res, _) {
+  try {
+    const { id } = req.params;
+    // Require authenticated requester (middleware `isAuth` should set req.user)
+    const requester = req.user;
+    if (!requester) {
+      return res.status(401).json("Unauthorized");
+    }
+
+    // If requester is not admin, they may only delete their own account
+    if (requester.role !== 'admin' && requester._id.toString() !== id) {
+      return res.status(403).json("Forbidden: cannot delete this user");
+    }
+
+    const userDeleted = await User.findByIdAndDelete(id);
+    if (!userDeleted) {
+      return res.status(404).json("User not found");
+    }
+
+    if (userDeleted.image) {
+      deleteImgCloudinary(userDeleted.image);
+    }
+
+    return res.status(200).json({
+      message: "User deleted successfully",
+      user: userDeleted
+    });
+  } catch (error) {
+    return res.status(400).json("Error deleting user");
+  }
+}
+
+// Change role of a user
+async function changeUserRole(req, res, _) {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+
+    const userUpdated = await User.findByIdAndUpdate(
+      id,
+      { role },
+      { new: true }
+    );
+    return res.status(200).json(userUpdated);
+  } catch (error) {
+    return res.status(400).json("Error changing user role");
+  }
+}
+
+module.exports = { registerUser, loginUser, deleteUser, changeUserRole }
