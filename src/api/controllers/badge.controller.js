@@ -30,88 +30,63 @@ async function createBadge(req, res, _) {
   }
 }
 
-// Add a badge to the authenticated user
-async function addBadgeToUser(req, res, _) {
+// Update user badge (add or remove)
+async function updateUserBadge(req, res, _) {
   try {
     const userId = req.user._id;
     const { badgeId } = req.params;
-    if (!badgeId) {
-      return res.status(400).json("BadgeId is required");
+    const action = req.body.action || req.query.action;
+
+    if (!badgeId) return res.status(400).json("BadgeId is required");
+    if (!action || (action !== "add" && action !== "remove")) {
+      return res.status(400).json("Action must be 'add' or 'remove'");
     }
 
-    // Check if the badge exists in the Badge collection
+    // Verify badge exists
     const badgeDoc = await Badge.findById(badgeId);
-    if (!badgeDoc) {
-      return res.status(404).json("Badge not found");
+    if (!badgeDoc) return res.status(404).json("Badge not found");
+
+    if (action === "add") {
+      const updatedUser = await User.findByIdAndUpdate(
+        userId,
+        { $addToSet: { badges: badgeId } },
+        { new: true }
+      ).select("badges");
+
+      if (!updatedUser) return res.status(404).json("User not found");
+
+      // Check if badge was actually added (length changed)
+      return res.status(201).json({
+        message: "Badge unlocked successfully",
+        badges: updatedUser.badges,
+      });
     }
-    // Obtain user to check if they already have the badge
-    const user = await User.findById(userId).select("badges");
-    if (!user) {
-      return res.status(404).json("User not found");
+
+    if (action === "remove") {
+      const updatedUser = await User.findByIdAndUpdate(
+        userId,
+        { $pull: { badges: badgeId } },
+        { new: true }
+      ).select("badges");
+
+      if (!updatedUser) return res.status(404).json("User not found");
+
+      // Check if badge was actually removed (length changed)
+      if (!updatedUser.badges.includes(badgeId)) {
+        return res.status(200).json({
+          message: "Badge was not assigned to user",
+          badges: updatedUser.badges,
+        });
+      }
+
+      return res.status(200).json({
+        message: "Badge removed successfully",
+        badges: updatedUser.badges,
+      });
     }
-    const alreadyUnlocked = user.badges.some(
-      (b) => b.toString() === badgeDoc._id.toString()
-    );
-    if (alreadyUnlocked) {
-      return res.status(400).json("Badge already unlocked");
-    }
-    // Add badge ObjectId to user's badges array
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      { $push: { badges: badgeDoc._id } },
-      { new: true }
-    ).select("badges");
-    return res.status(201).json({
-      message: "Badge unlocked successfully",
-      badges: updatedUser.badges,
-    });
   } catch (error) {
     console.log(error);
-    return res.status(400).json("Error adding badge");
-  }
-}
-
-// Remove a badge from the authenticated user
-async function removeBadgeFromUser(req, res, _) {
-  try {
-    const userId = req.user._id;
-    const { badgeId } = req.params;
-
-    // Check if the badge exists in the Badge collection
-    const badgeDoc = await Badge.findById(badgeId);
-    if (!badgeDoc) {
-      return res.status(404).json("Badge not found");
-    }
-
-    // Check if the user has the badge
-    const user = await User.findById(userId).select("badges");
-    if (!user) {
-      return res.status(404).json("User not found");
-    }
-    const hasBadge = user.badges.some(
-      (b) => b.toString() === badgeDoc._id.toString()
-    );
-    if (!hasBadge) {
-      return res.status(400).json("User does not have this badge");
-    }
-
-    // Remove badge ObjectId from user's badges array
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      { $pull: { badges: badgeId } },
-      { new: true }
-    ).select("badges");
-
-    if (!updatedUser) {
-      return res.status(404).json("User not found");
-    }
-
-    return res.status(200).json({
-      message: "Badge removed successfully",
-      badges: updatedUser.badges,
-    });
-  } catch (error) {
-    return res.status(400).json("Error removing badge");
+    return res.status(400).json("Error updating badge");
   }
 }
 
@@ -119,10 +94,7 @@ async function deleteBadge(req, res, _) {
   try {
     const { badgeId } = req.params;
     // Delete badge references from all users
-    await User.updateMany(
-      { badges: badgeId },
-      { $pull: { badges: badgeId } }
-    );
+    await User.updateMany({ badges: badgeId }, { $pull: { badges: badgeId } });
 
     // Delete badge from Badge collection
     const badgeDeleted = await Badge.findByIdAndDelete(badgeId);
@@ -139,10 +111,35 @@ async function deleteBadge(req, res, _) {
   }
 }
 
+// Update badge
+async function updateBadge(req, res, _) {
+  try {
+    const { badgeId } = req.params;
+    const updateData = { ...req.body };
+
+    // Prevent badgeId change
+    if (updateData.badgeId) {
+      return res.status(400).json("badgeId cannot be changed");
+    }
+
+    const badgeUpdated = await Badge.findByIdAndUpdate(badgeId, updateData, {
+      new: true,
+    });
+
+    if (!badgeUpdated) {
+      return res.status(404).json("Badge not found");
+    }
+
+    return res.status(200).json(badgeUpdated);
+  } catch (error) {
+    return res.status(400).json("Error updating badge");
+  }
+}
+
 module.exports = {
   getUserBadges,
   createBadge,
-  addBadgeToUser,
+  updateUserBadge,
   deleteBadge,
-  removeBadgeFromUser
+  updateBadge,
 };

@@ -3,6 +3,16 @@ const bcrypt = require('bcrypt')
 const { generateToken } = require('../../utils/token');
 const { deleteImgCloudinary } = require('../../utils/cloudinary');
 
+// Get all users (for admin use)
+async function getAllUsers(req, res, _) {
+  try {
+    const users = await User.find().select('-password');
+    return res.status(200).json(users);
+  } catch (error) {
+    return res.status(400).json("Error fetching users");
+  }
+}
+
 // Register a new user
 async function registerUser(req, res, _) {
   try {
@@ -35,7 +45,7 @@ async function loginUser(req, res, _) {
       const token = generateToken(user._id, user.email);
       return res.status(200).json(token);
     } else {
-      res.status(400).json("Error: Incorrect username or password"); 
+      return res.status(400).json("Error: Incorrect username or password"); 
     }
   } catch (error) {
     return res.status(400).json("Error logging in user");
@@ -75,6 +85,45 @@ async function deleteUser(req, res, _) {
   }
 }
 
+// Update user (excluding username)
+async function updateUser(req, res, _) {
+  try {
+    const { id } = req.params;
+    const updateData = { ...req.body };
+    // Prevent username change
+    if (updateData.username) {
+      return res.status(400).json("Username cannot be changed");
+    }
+
+    const user = await User.findOne({ username: updateData.username });
+    if (!user) {
+      return res.status(400).json("Error: User not found");
+    }
+
+    // If updating password, hash it
+    if (updateData.password) {
+      updateData.password = bcrypt.hashSync(updateData.password, 10);
+    }
+
+    // If updating the role, ensure only admin can do it or requester is the same user
+    if (updateData.role) {
+      const requester = req.user;
+      if (requester.role !== 'admin' && requester._id.toString() !== id) {
+        return res.status(403).json("Forbidden: cannot change role");
+      }
+    }
+
+    const userUpdated = await User.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true }
+    ).select('-password');
+    return res.status(200).json(userUpdated);
+  } catch (error) {
+    return res.status(400).json("Error updating user");
+  }
+}
+
 // Change role of a user
 async function changeUserRole(req, res, _) {
   try {
@@ -85,11 +134,11 @@ async function changeUserRole(req, res, _) {
       id,
       { role },
       { new: true }
-    );
+    ).select('-password');
     return res.status(200).json(userUpdated);
   } catch (error) {
     return res.status(400).json("Error changing user role");
   }
 }
 
-module.exports = { registerUser, loginUser, deleteUser, changeUserRole }
+module.exports = { getAllUsers, registerUser, loginUser, deleteUser, updateUser, changeUserRole }

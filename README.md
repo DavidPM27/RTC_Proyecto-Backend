@@ -35,8 +35,8 @@ Se basa en un servidor para manejar colecciones de usuarios y de medallas.
 
 1. Clona el repositorio:
 ```powershell
-git clone <repo-url>
-cd Proyecto_Backend
+git clone https://github.com/DavidPM27/RTC_Proyecto-Backend.git
+cd RTC_Proyecto-Backend
 ```
 
 2. Instala las dependencias:
@@ -67,21 +67,28 @@ npm run dev
 
 El servidor estará disponible en `http://localhost:3000` (o el puerto que hayas configurado en `PORT`).
 
-## Endpoints principales (ejemplos)
-Las rutas se dividen en dos agrupaciones `/users` y `/badges`. Los endpoints disponibles son:
+## Endpoints principales
 
-- Usuarios
-    - `POST /users/register` — Registrar usuario
-    - `POST /users/login` — Iniciar sesión (devuelve JWT)
-    - `DELETE /users/:id` — (admin) Borrar usuario (usuarios solo pueden borrar su propia cuenta)
-    - `PATCH /users/changeRole/:id` — (admin) Cambiar rol de usuario
+### Usuarios
 
-- Badges
-    - `GET /badges` — (auth) Obtener los badges del usuario autenticado. Devuelve los documentos `Badge` correspondientes a los ObjectId almacenados en `user.badges`.
-    - `POST /badges/create` — (admin) Crear un nuevo `Badge` en la colección `badges`.
-    - `POST /badges/:badgeId` — (auth) Asociar un `Badge` al usuario actual.
-    - `DELETE /badges/:badgeId` — (auth) Eliminar la asociación del badge con el usuario actual.
-    - `DELETE /badges/delete/:badgeId` — (admin) Borrar un `Badge` de la colección `badges`.
+| Método | Ruta | Autenticación | Descripción |
+| ------ | ------ | ------ | ------ |
+| GET | `/users` | `isAdmin` | Obtener todos los usuarios (solo admins) |
+| POST | `/users/register` | - | Registrar usuario (permite subida de imagen) |
+| POST | `/users/login` | - | Iniciar sesión (devuelve JWT) |
+| DELETE | `/users/:id` | `isAuth` | Borrar usuario (admins pueden borrar cualquier cuenta; usuarios sólo su propia) |
+| PUT | `/users/changeRole/:id` | `isAdmin` | Cambiar rol de usuario |
+
+### Badges
+
+| Método | Ruta | Autenticación | Descripción |
+| ------ | ------ | ------ | ------ |
+| GET | `/badges` | `isAuth` | Obtener badges del usuario autenticado |
+| POST | `/badges/create` | `isAdmin` | Crear un nuevo Badge en la colección |
+| POST | `/badges/:badgeId` | `isAuth` | Asociar un Badge al usuario actual (action: add) |
+| DELETE | `/badges/:badgeId` | `isAuth` | Eliminar asociación del badge con el usuario (action: remove) |
+| PUT | `/badges/update/:badgeId` | `isAdmin` | Actualizar información de un Badge |
+| DELETE | `/badges/delete/:badgeId` | `isAdmin` | Borrar un Badge de la colección (operación administrativa)
 
 ## Variables de entorno
 Crear un archivo `.env` con al menos las siguientes variables:
