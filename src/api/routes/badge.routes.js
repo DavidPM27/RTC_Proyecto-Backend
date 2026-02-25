@@ -6,6 +6,7 @@ const {
   createBadge,
   deleteBadge,
   updateBadge,
+  getBadge,
 } = require("../controllers/badge.controller");
 
 const badgesRouter = express.Router();
@@ -22,5 +23,6 @@ badgesRouter.delete("/:badgeId", isAuth, (req, res, next) => {
 });
 badgesRouter.delete("/delete/:badgeId", isAdmin, deleteBadge);
 badgesRouter.put("/update/:badgeId", isAdmin, updateBadge);
+badgesRouter.get("/:badgeId", getBadge);
 
 module.exports = badgesRouter;

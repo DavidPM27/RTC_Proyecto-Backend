@@ -63,21 +63,20 @@ async function updateUserBadge(req, res, _) {
     }
 
     if (action === "remove") {
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json("User not found");
+      }
+
+      if (!user.badges.includes(badgeId)) {
+        return res.status(200).json("Badge was not assigned to user")
+      };
+
       const updatedUser = await User.findByIdAndUpdate(
         userId,
         { $pull: { badges: badgeId } },
         { new: true }
       ).select("badges");
-
-      if (!updatedUser) return res.status(404).json("User not found");
-
-      // Check if badge was actually removed (length changed)
-      if (!updatedUser.badges.includes(badgeId)) {
-        return res.status(200).json({
-          message: "Badge was not assigned to user",
-          badges: updatedUser.badges,
-        });
-      }
 
       return res.status(200).json({
         message: "Badge removed successfully",
@@ -136,10 +135,25 @@ async function updateBadge(req, res, _) {
   }
 }
 
+// Get badge
+async function getBadge(req, res, _) {
+  try {
+    const { badgeId } = req.params;
+    const badge = await Badge.findById(badgeId);
+    if (!badge) {
+      return res.status(404).json("Badge not found");
+    }
+    return res.status(200).json(badge);
+  } catch (error) {
+    return res.status(400).json("Error getting badge");
+  }
+}
+
 module.exports = {
   getUserBadges,
   createBadge,
   updateUserBadge,
   deleteBadge,
   updateBadge,
+  getBadge,
 };

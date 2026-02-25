@@ -95,7 +95,7 @@ async function updateUser(req, res, _) {
       return res.status(400).json("Username cannot be changed");
     }
 
-    const user = await User.findOne({ username: updateData.username });
+    const user = await User.findById(id);
     if (!user) {
       return res.status(400).json("Error: User not found");
     }
@@ -141,4 +141,18 @@ async function changeUserRole(req, res, _) {
   }
 }
 
-module.exports = { getAllUsers, registerUser, loginUser, deleteUser, updateUser, changeUserRole }
+// Get user
+async function getUser(req, res, _) {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json("User not found");
+    }
+    return res.status(200).json(user);
+  } catch (error) {
+    return res.status(400).json("Error getting user");
+  }
+} 
+
+module.exports = { getAllUsers, registerUser, loginUser, deleteUser, updateUser, changeUserRole, getUser }
