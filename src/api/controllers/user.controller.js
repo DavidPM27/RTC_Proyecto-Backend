@@ -56,7 +56,7 @@ async function loginUser(req, res, _) {
 async function deleteUser(req, res, _) {
   try {
     const { id } = req.params;
-    // Require authenticated requester (middleware `isAuth` should set req.user)
+    // Require authenticated requester (middleware `auth` should set req.user)
     const requester = req.user;
     if (!requester) {
       return res.status(401).json("Unauthorized");

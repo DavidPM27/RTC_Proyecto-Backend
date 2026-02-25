@@ -13,7 +13,7 @@ Se basa en un servidor para manejar colecciones de usuarios y de medallas.
 ## Qué hace este proyecto
 - Gestión de usuarios: Registro, login, eliminación y cambio de rol.
 - Sistema de "badges": Colección de badges y relación 0:N desde `User` (cada usuario referencia badges por ObjectId).
-- Middlewares: Autenticación (`isAuth`, `isAdmin`) y subida/gestión de imágenes.
+- Middlewares: Autenticación (`auth`) dependiente de roles (`admin` o `user`) y subida/gestión de imágenes.
 - Utilidades: Script de seed para generar la base de datos con datos de ejemplo.
 
 ## Estructura relevante
@@ -78,6 +78,8 @@ El servidor estará disponible en `http://localhost:3000` (o el puerto que hayas
 | POST | `/users/login` | - | Iniciar sesión (devuelve JWT) |
 | DELETE | `/users/:id` | `isAuth` | Borrar usuario (admins pueden borrar cualquier cuenta; usuarios sólo su propia) |
 | PUT | `/users/changeRole/:id` | `isAdmin` | Cambiar rol de usuario |
+| PUT | `/users/:id` | `isAuth` | Actualizar usuario (permite subida de imagen) |
+| GET | `/users/:id` | `isAuth` | Obtener usuario |
 
 ### Badges
 
@@ -89,6 +91,7 @@ El servidor estará disponible en `http://localhost:3000` (o el puerto que hayas
 | DELETE | `/badges/:badgeId` | `isAuth` | Eliminar asociación del badge con el usuario (action: remove) |
 | PUT | `/badges/update/:badgeId` | `isAdmin` | Actualizar información de un Badge |
 | DELETE | `/badges/delete/:badgeId` | `isAdmin` | Borrar un Badge de la colección (operación administrativa)
+| GET | `/badges/:badgeId` | `isAuth` | Obtener badge |
 
 ## Variables de entorno
 Crear un archivo `.env` con al menos las siguientes variables:
